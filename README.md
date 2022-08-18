@@ -1,0 +1,1 @@
+# inventree-cups-plugin
