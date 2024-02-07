@@ -1,46 +1,52 @@
-"""Cups label printing plugin for InvenTree.
-
-Supports direct printing of labels to networked label printers, using the pycups library.
-"""
-
-# Required libs
 import cups
+from typing import Any, Dict
 from tempfile import NamedTemporaryFile
-from time import time
 
-# translation
-from django.utils.translation import ugettext_lazy as _
+from rest_framework.request import Request
+from django.utils.translation import gettext_lazy as _
+
+# InvenTree imports
+from label.models import LabelTemplate
+from plugin import InvenTreePlugin
+from plugin.base.label.mixins import LabelItemType
+from plugin.machine import BaseMachineType
+from plugin.machine.machine_types import LabelPrinterBaseDriver, LabelPrinterMachine
 
 from inventree_cups.version import CUPS_PLUGIN_VERSION
 
-# InvenTree plugin libs
-from plugin import InvenTreePlugin
-from plugin.mixins import LabelPrintingMixin, SettingsMixin
-
-
-class CupsLabelPlugin(LabelPrintingMixin, SettingsMixin, InvenTreePlugin):
+class CupsLabelPlugin(InvenTreePlugin):
     AUTHOR = "wolflu05"
-    DESCRIPTION = "Label printing plugin for CUPS server"
+    DESCRIPTION = "Label printer plugin for CUPS server"
     VERSION = CUPS_PLUGIN_VERSION
 
-    NAME = "CupsLabels"
-    SLUG = "cups"
-    TITLE = "Cups Label Printer"
+    # Machine registry was added in InvenTree 0.14.0, use inventree-cups-plugin 0.1.0 for older versions
+    MIN_VERSION = "0.14.0"
 
-    CONNECTION_INVALIDATION_TIME = 60
+    NAME = "CupsLabelPrinterDriver"
+    SLUG = "cups-driver"
+    TITLE = "Cups Label Printer Driver"
+
+class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
+    """Cups label printing driver for InvenTree."""
+
+    SLUG = "cups-driver"
+    NAME = "Cups Driver"
+    DESCRIPTION = "Cups label printing driver for InvenTree"
 
     def __init__(self, *args, **kwargs):
-        self.SETTINGS = {
+        self.MACHINE_SETTINGS = {
             'SERVER': {
                 'name': _('Server'),
                 'description': _('IP/Hostname to connect to the cups server'),
                 'default': 'localhost',
+                'required': True,
             },
             'PORT': {
                 'name': _('Port'),
                 'description': _('Port to connect to the cups server'),
                 'validator': int,
                 'default': 631,
+                'required': True,
             },
             'USER': {
                 'name': _('User'),
@@ -51,72 +57,63 @@ class CupsLabelPlugin(LabelPrintingMixin, SettingsMixin, InvenTreePlugin):
                 'name': _('Password'),
                 'description': _('Password to connect to the cups server'),
                 'default': '',
+                'protected': True,
             },
             'PRINTER': {
                 'name': _('Printer'),
                 'description': _('Printer from cups server'),
                 'choices': self.get_printer_choices,
-                'default': '',
+                'required': True,
             },
         }
 
-        self.connection = None
-
         super().__init__(*args, **kwargs)
 
-    def get_printer_choices(self):
-        conn = self.get_connection()
+    def init_machine(self, machine: BaseMachineType):
+        if self.get_connection(machine) is None:
+            machine.handle_error(_("Cannot connect to cups server"))
+
+    def update_machine(self, old_machine_state: Dict[str, Any], machine: BaseMachineType):
+        machine.errors = []
+        machine.initialize()
+
+    def get_printer_choices(self, **kwargs):
+        conn = self.get_connection(kwargs['machine_config'].machine)
 
         if conn:
-            return [(f"{dev}", f"{dev}") for dev in conn.getPrinters()]
-        return [("", _("error scanning for printers"))]
+            return [(dev_id, dev['printer-info'] or dev_id) for dev_id, dev in conn.getPrinters().items()]
+        return [("", _("Error scanning for printers"))]
 
-    def serialize_connection(self):
-        return "-".join(map(lambda x: str(self.get_setting(x)), ["SERVER", "PORT", "USER", "PASSWORD"]))
-
-    def get_connection(self):
-        if self.connection:
-            conn = self.connection
-
-            # check if conn is not older than CONNECTION_INVALIDATION_TIME and connection was initiated with same settings
-            if time() - conn['initiation_time'] < self.CONNECTION_INVALIDATION_TIME and conn['key'] == self.serialize_connection():
-                return conn['connection']
-
-        key = self.serialize_connection()
-        cups.setServer(self.get_setting('SERVER'))
-        cups.setPort(self.get_setting('PORT'))
-        cups.setUser(self.get_setting('USER'))
-        cups.setPasswordCB(lambda: self.get_setting('PASSWORD'))
+    def get_connection(self, machine: LabelPrinterMachine):
+        cups.setServer(machine.get_setting('SERVER', 'D'))
+        cups.setPort(machine.get_setting('PORT', 'D'))
+        cups.setUser(machine.get_setting('USER', 'D'))
+        cups.setPasswordCB(lambda: machine.get_setting('PASSWORD', 'D'))
 
         try:
-            conn = cups.Connection()
-
-            self.connection = {
-                'key': key,
-                'initiation_time': time(),
-                'connection': conn,
-            }
-
-            return self.connection['connection']
-
+            return cups.Connection()
         except Exception:
-            self.connection = None
             return None
 
-    def print_label(self, **kwargs):
-        """
-        Send the label to the printer
-        """
-
-        conn = self.get_connection()
+    def print_label(self, machine: LabelPrinterMachine, label: LabelTemplate, item: LabelItemType, request: Request, **kwargs) -> None:
+        conn = self.get_connection(machine)
 
         if conn is None:
-            raise Exception(_("Cannot get connection to printer"))
+            machine.handle_error(_('Cannot get connection to printer'))
 
-        f = NamedTemporaryFile()
-        f.write(kwargs['pdf_data'])
+        pdf_data = self.render_to_pdf_data(label, item, request)
 
-        conn.printFile(self.get_setting('PRINTER'),
-                       f.name, kwargs['filename'], {})
+        with NamedTemporaryFile(suffix='.pdf') as f:
+            f.write(pdf_data)
+            f.flush()
 
-        f.close()
+            try:
+                for copy_idx in range(kwargs.get('printing_options', {}).get('copies', 1)):
+                    conn.printFile(
+                        machine.get_setting('PRINTER', 'D'),
+                        f.name,
+                        f'{label.name}-{item.pk}-{copy_idx}.pdf',
+                        {},
+                    )
+            except Exception as e:
+                machine.handle_error(_('Error printing label') + f': {e}')
