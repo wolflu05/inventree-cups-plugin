@@ -1,3 +1,5 @@
+"""This package provides a cups printer driver."""
+
 import cups
 from typing import Any, Dict
 from tempfile import NamedTemporaryFile
@@ -14,7 +16,10 @@ from plugin.machine.machine_types import LabelPrinterBaseDriver, LabelPrinterMac
 
 from inventree_cups.version import CUPS_PLUGIN_VERSION
 
+
 class CupsLabelPlugin(InvenTreePlugin):
+    """Cups label printer driver plugin for InvenTree."""
+
     AUTHOR = "wolflu05"
     DESCRIPTION = "Label printer plugin for CUPS server"
     VERSION = CUPS_PLUGIN_VERSION
@@ -26,6 +31,7 @@ class CupsLabelPlugin(InvenTreePlugin):
     SLUG = "cups-driver"
     TITLE = "Cups Label Printer Driver"
 
+
 class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
     """Cups label printing driver for InvenTree."""
 
@@ -34,6 +40,7 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
     DESCRIPTION = "Cups label printing driver for InvenTree"
 
     def __init__(self, *args, **kwargs):
+        """Initialize the CupsLabelPrinterDriver."""
         self.MACHINE_SETTINGS = {
             'SERVER': {
                 'name': _('Server'),
@@ -70,14 +77,17 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
         super().__init__(*args, **kwargs)
 
     def init_machine(self, machine: BaseMachineType):
+        """Machine initialize hook."""
         if self.get_connection(machine) is None:
             machine.handle_error(_("Cannot connect to cups server"))
 
     def update_machine(self, old_machine_state: Dict[str, Any], machine: BaseMachineType):
+        """Machine update hook."""
         machine.errors = []
         machine.initialize()
 
     def get_printer_choices(self, **kwargs):
+        """Get printer choices from cups server."""
         conn = self.get_connection(kwargs['machine_config'].machine)
 
         if conn:
@@ -85,6 +95,7 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
         return [("", _("Error scanning for printers"))]
 
     def get_connection(self, machine: LabelPrinterMachine):
+        """Get connection to cups server."""
         cups.setServer(machine.get_setting('SERVER', 'D'))
         cups.setPort(machine.get_setting('PORT', 'D'))
         cups.setUser(machine.get_setting('USER', 'D'))
@@ -96,6 +107,7 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
             return None
 
     def print_label(self, machine: LabelPrinterMachine, label: LabelTemplate, item: LabelItemType, request: Request, **kwargs) -> None:
+        """Print label using cups server."""
         conn = self.get_connection(machine)
 
         if conn is None:
