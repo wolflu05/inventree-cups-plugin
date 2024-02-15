@@ -13,18 +13,7 @@ A label printer driver plugin for [InvenTree](https://inventree.org), which prov
 > [!IMPORTANT]
 > For InvenTree<0.14 use this package with version `0.1.0`
 
-Goto "Settings > Plugins > Install Plugin" and enter the following values:
-
-```txt
-Package name: inventree-cups-plugin 
-Source URL: git+https://github.com/wolflu05/inventree-cups-plugin
-```
-
-Or install this plugin from the terminal:
-
-```bash
-pip install git+https://github.com/wolflu05/inventree-cups-plugin
-```
+Goto "Settings > Plugins > Install Plugin" and enter `inventree-cups-plugin` as package name.
 
 ### Docker
 
@@ -94,10 +83,10 @@ COPY --from=prebuild /root/.local /root/.local
 
 ## Configuration Options
 
-| Name| Description| Example |
-| --- | --- | --- |
-| Server | IP/Hostname to connect to the cups server | `192.168.1.5` |
-| Port | Port to connect to the cups server | `631` | 
-| User | User to connect to the cups server	| *can also be empty* |
-| Password | Password to connect to the cups server	| *can also be empty* |
-| Printer | Printer from cups server, can be selected if valid connection options are set | `myprinter` |
+| Name     | Description                                                                   | Example             |
+| -------- | ----------------------------------------------------------------------------- | ------------------- |
+| Server   | IP/Hostname to connect to the cups server                                     | `192.168.1.5`       |
+| Port     | Port to connect to the cups server                                            | `631`               |
+| User     | User to connect to the cups server                                            | _can also be empty_ |
+| Password | Password to connect to the cups server                                        | _can also be empty_ |
+| Printer  | Printer from cups server, can be selected if valid connection options are set | `myprinter`         |
