@@ -1,7 +1,6 @@
 """This package provides a cups printer driver."""
 
 import cups
-from typing import Any, Dict
 from tempfile import NamedTemporaryFile
 
 from django.db import models
