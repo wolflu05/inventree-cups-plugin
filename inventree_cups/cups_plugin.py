@@ -1,16 +1,14 @@
 """This package provides a cups printer driver."""
 
 import cups
-from typing import Any, Dict
 from tempfile import NamedTemporaryFile
 
-from rest_framework.request import Request
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 # InvenTree imports
-from label.models import LabelTemplate
+from report.models import LabelTemplate
 from plugin import InvenTreePlugin
-from plugin.base.label.mixins import LabelItemType
 from plugin.machine import BaseMachineType
 from plugin.machine.machine_types import LabelPrinterBaseDriver, LabelPrinterMachine
 
@@ -25,7 +23,8 @@ class CupsLabelPlugin(InvenTreePlugin):
     VERSION = CUPS_PLUGIN_VERSION
 
     # Machine registry was added in InvenTree 0.14.0, use inventree-cups-plugin 0.1.0 for older versions
-    MIN_VERSION = "0.14.0"
+    # Machine driver interface was fixed with 0.16.0 to work inside of inventree workers
+    MIN_VERSION = "0.16.0"
 
     NAME = "CupsLabelPrinterDriver"
     SLUG = "cups-driver"
@@ -81,11 +80,6 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
         if self.get_connection(machine) is None:
             machine.handle_error(_("Cannot connect to cups server"))
 
-    def update_machine(self, old_machine_state: Dict[str, Any], machine: BaseMachineType):
-        """Machine update hook."""
-        machine.errors = []
-        machine.initialize()
-
     def get_printer_choices(self, **kwargs):
         """Get printer choices from cups server."""
         conn = self.get_connection(kwargs['machine_config'].machine)
@@ -106,14 +100,17 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
         except Exception:
             return None
 
-    def print_label(self, machine: LabelPrinterMachine, label: LabelTemplate, item: LabelItemType, request: Request, **kwargs) -> None:
+    def print_label(self, machine: LabelPrinterMachine, label: LabelTemplate, item: models.Model, **kwargs) -> None:
         """Print label using cups server."""
+        machine.set_status(LabelPrinterMachine.MACHINE_STATUS.UNKNOWN)
         conn = self.get_connection(machine)
 
         if conn is None:
             machine.handle_error(_('Cannot get connection to printer'))
+            machine.set_status(LabelPrinterMachine.MACHINE_STATUS.DISCONNECTED)
+            return
 
-        pdf_data = self.render_to_pdf_data(label, item, request)
+        pdf_data = self.render_to_pdf_data(label, item)
 
         with NamedTemporaryFile(suffix='.pdf') as f:
             f.write(pdf_data)
@@ -128,4 +125,5 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
                         {},
                     )
             except Exception as e:
+                machine.set_status(LabelPrinterMachine.MACHINE_STATUS.DISCONNECTED)
                 machine.handle_error(_('Error printing label') + f': {e}')

@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![CI](https://github.com/wolflu05/inventree-cups-plugin/actions/workflows/ci.yml/badge.svg)
 
-A label printer driver plugin for [InvenTree](https://inventree.org), which provides support for [Cups label printing servers](https://www.cups.org). If your printer is not cups compatible, you can setup a cups printing server. This [article](https://nerdig.es/labelwriter-im-netz-teil1/) describes how to setup a cups printing server for the DYMO LabelWriter 450 Duo.
+A label printer driver plugin for [InvenTree](https://inventree.org), which provides support for [Cups label printing servers](https://www.cups.org). If your printer is not cups compatible, you can setup a cups printing server. This [article](https://nerdig.es/labelwriter-im-netz-teil1/) describes how to setup a cups printing server for the DYMO LabelWriter 450 Duo. If you have a Dymo printer, you might also want to check out the dedicated inventree-dymo-plugin which is the recommended choice because it works more performant.
 
 ## Installation
 
@@ -11,7 +11,7 @@ A label printer driver plugin for [InvenTree](https://inventree.org), which prov
 > This plugin needs `cups-devel` installed to install its dependencies. You can read more about the requirements at [`pycups`](https://github.com/OpenPrinting/pycups). If you're using `apt` as a package manager run `apt install libcups2-dev` before. For docker see [below](#docker).
 
 > [!IMPORTANT]
-> For InvenTree<0.14 use this package with version `0.1.0`
+> For InvenTree<0.16 use this package with version `0.1.0`
 
 Goto "Settings > Plugins > Install Plugin" and enter `inventree-cups-plugin` as package name.
 
