@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![CI](https://github.com/wolflu05/inventree-cups-plugin/actions/workflows/ci.yml/badge.svg)
 
-A label printer driver plugin for [InvenTree](https://inventree.org), which provides support for [Cups label printing servers](https://www.cups.org). If your printer is not cups compatible, you can setup a cups printing server. This [article](https://nerdig.es/labelwriter-im-netz-teil1/) describes how to setup a cups printing server for the DYMO LabelWriter 450 Duo. If you have a Dymo printer, you might also want to check out the dedicated inventree-dymo-plugin which is the recommended choice because it works more performant.
+A label printer driver plugin for [InvenTree](https://inventree.org), which provides support for [Cups label printing servers](https://www.cups.org). If your printer is not cups compatible, you can setup a cups printing server. This [article](https://nerdig.es/labelwriter-im-netz-teil1/) describes how to setup a cups printing server for the DYMO LabelWriter 450 Duo. If you have a Dymo printer, you might also want to check out the dedicated [`inventree-dymo-plugin`](https://github.com/wolflu05/inventree-dymo-plugin) which is the recommended choice because it works more performant.
 
 ## Installation
 
@@ -67,7 +67,7 @@ index 8adee63..dc3993c 100644
 ARG INVENTREE_TAG
 
 # prebuild stage - needs a lot of build dependencies
-FROM python:3.10-alpine3.18 as prebuild
+FROM python:3.11-alpine3.18 as prebuild
 
 RUN apk add --no-cache cups-dev gcc git musl-dev && \
     pip install --user --no-cache-dir git+https://github.com/wolflu05/inventree-cups-plugin
