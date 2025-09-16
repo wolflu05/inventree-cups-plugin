@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import setuptools
+import importlib
+import os
 
-from inventree_cups.version import CUPS_PLUGIN_VERSION
+module_path = os.path.join(os.path.dirname(__file__), "inventree_cups", "__init__.py")
+spec = importlib.util.spec_from_file_location("inventree_cups", module_path)
+inventree_cups = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(inventree_cups)
+
 
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
@@ -11,7 +17,7 @@ with open('README.md', encoding='utf-8') as f:
 setuptools.setup(
     name="inventree-cups-plugin",
 
-    version=CUPS_PLUGIN_VERSION,
+    version=inventree_cups.PLUGIN_VERSION,
 
     author="wolflu05",
 
@@ -40,7 +46,7 @@ setuptools.setup(
         "twine",
     ],
 
-    python_requires=">=3.6",
+    python_requires=">=3.9",
 
     entry_points={
         "inventree_plugins": [

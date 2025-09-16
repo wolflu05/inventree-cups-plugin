@@ -9,26 +9,32 @@ from django.utils.translation import gettext_lazy as _
 # InvenTree imports
 from report.models import LabelTemplate
 from plugin import InvenTreePlugin
+from plugin.mixins import MachineDriverMixin
 from plugin.machine import BaseMachineType
 from plugin.machine.machine_types import LabelPrinterBaseDriver, LabelPrinterMachine
 
-from inventree_cups.version import CUPS_PLUGIN_VERSION
+from inventree_cups import PLUGIN_VERSION
 
 
-class CupsLabelPlugin(InvenTreePlugin):
+class CupsLabelPlugin(InvenTreePlugin, MachineDriverMixin):
     """Cups label printer driver plugin for InvenTree."""
 
     AUTHOR = "wolflu05"
     DESCRIPTION = "Label printer plugin for CUPS server"
-    VERSION = CUPS_PLUGIN_VERSION
+    VERSION = PLUGIN_VERSION
 
     # Machine registry was added in InvenTree 0.14.0, use inventree-cups-plugin 0.1.0 for older versions
     # Machine driver interface was fixed with 0.16.0 to work inside of inventree workers
-    MIN_VERSION = "0.16.0"
+    # Machine driver interface was changed in 0.18.0
+    MIN_VERSION = "0.18.0"
 
-    NAME = "CupsLabelPrinterDriver"
-    SLUG = "cups-driver"
-    TITLE = "Cups Label Printer Driver"
+    NAME = "InvenTree Cups Plugin"
+    SLUG = "inventree-cups-plugin"
+    TITLE = "InvenTree Cups Plugin"
+
+    def get_machine_drivers(self):
+        """Register machine drivers."""
+        return [CupsLabelPrinterDriver]
 
 
 class CupsLabelPrinterDriver(LabelPrinterBaseDriver):

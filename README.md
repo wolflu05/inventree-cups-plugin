@@ -11,7 +11,7 @@ A label printer driver plugin for [InvenTree](https://inventree.org), which prov
 > This plugin needs `cups-devel` installed to install its dependencies. You can read more about the requirements at [`pycups`](https://github.com/OpenPrinting/pycups). If you're using `apt` as a package manager run `apt install libcups2-dev` before. For docker see [below](#docker).
 
 > [!IMPORTANT]
-> For InvenTree<0.16 use this package with version `0.1.0`
+> This plugin is only compatible with InvenTree>=0.18, for older versions use v1.0.0 of this plugin.
 
 Goto "Settings > Plugins > Install Plugin" and enter `inventree-cups-plugin` as package name.
 
