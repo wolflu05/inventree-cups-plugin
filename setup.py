@@ -53,4 +53,10 @@ setuptools.setup(
             "CupsLabelPlugin = inventree_cups.cups_plugin:CupsLabelPlugin"
         ]
     },
+
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "Operating System :: OS Independent",
+        "Framework :: InvenTree",
+    ],
 )
