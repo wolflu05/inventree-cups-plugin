@@ -47,35 +47,35 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
     def __init__(self, *args, **kwargs):
         """Initialize the CupsLabelPrinterDriver."""
         self.MACHINE_SETTINGS = {
-            'SERVER': {
-                'name': _('Server'),
-                'description': _('IP/Hostname to connect to the cups server'),
-                'default': 'localhost',
-                'required': True,
+            "SERVER": {
+                "name": _("Server"),
+                "description": _("IP/Hostname to connect to the cups server"),
+                "default": "localhost",
+                "required": True,
             },
-            'PORT': {
-                'name': _('Port'),
-                'description': _('Port to connect to the cups server'),
-                'validator': int,
-                'default': 631,
-                'required': True,
+            "PORT": {
+                "name": _("Port"),
+                "description": _("Port to connect to the cups server"),
+                "validator": int,
+                "default": 631,
+                "required": True,
             },
-            'USER': {
-                'name': _('User'),
-                'description': _('User to connect to the cups server'),
-                'default': '',
+            "USER": {
+                "name": _("User"),
+                "description": _("User to connect to the cups server"),
+                "default": "",
             },
-            'PASSWORD': {
-                'name': _('Password'),
-                'description': _('Password to connect to the cups server'),
-                'default': '',
-                'protected': True,
+            "PASSWORD": {
+                "name": _("Password"),
+                "description": _("Password to connect to the cups server"),
+                "default": "",
+                "protected": True,
             },
-            'PRINTER': {
-                'name': _('Printer'),
-                'description': _('Printer from cups server'),
-                'choices': self.get_printer_choices,
-                'required': True,
+            "PRINTER": {
+                "name": _("Printer"),
+                "description": _("Printer from cups server"),
+                "choices": self.get_printer_choices,
+                "required": True,
             },
         }
 
@@ -88,48 +88,59 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
 
     def get_printer_choices(self, **kwargs):
         """Get printer choices from cups server."""
-        conn = self.get_connection(kwargs['machine_config'].machine)
+        conn = self.get_connection(kwargs["machine_config"].machine)
 
         if conn:
-            return [(dev_id, dev['printer-info'] or dev_id) for dev_id, dev in conn.getPrinters().items()]
+            return [
+                (dev_id, dev["printer-info"] or dev_id)
+                for dev_id, dev in conn.getPrinters().items()
+            ]
         return [("", _("Error scanning for printers"))]
 
     def get_connection(self, machine: LabelPrinterMachine):
         """Get connection to cups server."""
-        cups.setServer(machine.get_setting('SERVER', 'D'))
-        cups.setPort(machine.get_setting('PORT', 'D'))
-        cups.setUser(machine.get_setting('USER', 'D'))
-        cups.setPasswordCB(lambda: machine.get_setting('PASSWORD', 'D'))
+        cups.setServer(machine.get_setting("SERVER", "D"))
+        cups.setPort(machine.get_setting("PORT", "D"))
+        cups.setUser(machine.get_setting("USER", "D"))
+        cups.setPasswordCB(lambda: machine.get_setting("PASSWORD", "D"))
 
         try:
             return cups.Connection()
         except Exception:
             return None
 
-    def print_label(self, machine: LabelPrinterMachine, label: LabelTemplate, item: models.Model, **kwargs) -> None:
+    def print_label(
+        self,
+        machine: LabelPrinterMachine,
+        label: LabelTemplate,
+        item: models.Model,
+        **kwargs,
+    ) -> None:
         """Print label using cups server."""
         machine.set_status(LabelPrinterMachine.MACHINE_STATUS.UNKNOWN)
         conn = self.get_connection(machine)
 
         if conn is None:
-            machine.handle_error(_('Cannot get connection to printer'))
+            machine.handle_error(_("Cannot get connection to printer"))
             machine.set_status(LabelPrinterMachine.MACHINE_STATUS.DISCONNECTED)
             return
 
         pdf_data = self.render_to_pdf_data(label, item)
 
-        with NamedTemporaryFile(suffix='.pdf') as f:
+        with NamedTemporaryFile(suffix=".pdf") as f:
             f.write(pdf_data)
             f.flush()
 
             try:
-                for copy_idx in range(kwargs.get('printing_options', {}).get('copies', 1)):
+                for copy_idx in range(
+                    kwargs.get("printing_options", {}).get("copies", 1)
+                ):
                     conn.printFile(
-                        machine.get_setting('PRINTER', 'D'),
+                        machine.get_setting("PRINTER", "D"),
                         f.name,
-                        f'{label.name}-{item.pk}-{copy_idx}.pdf',
+                        f"{label.name}-{item.pk}-{copy_idx}.pdf",
                         {},
                     )
             except Exception as e:
                 machine.set_status(LabelPrinterMachine.MACHINE_STATUS.DISCONNECTED)
-                machine.handle_error(_('Error printing label') + f': {e}')
+                machine.handle_error(_("Error printing label") + f": {e}")
