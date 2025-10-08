@@ -67,15 +67,15 @@ index 8adee63..dc3993c 100644
 ARG INVENTREE_TAG
 
 # prebuild stage - needs a lot of build dependencies
-FROM python:3.11-alpine3.18 as prebuild
+FROM python:3.11-slim-trixie as prebuild
 
-RUN apk add --no-cache cups-dev gcc git musl-dev && \
+RUN apt-get update && apt-get install -y libcups2-dev gcc git musl-dev && apt-get clean && \
     pip install --user --no-cache-dir git+https://github.com/wolflu05/inventree-cups-plugin
 
 # production image - only install the cups shared library
 FROM inventree/inventree:${INVENTREE_TAG} as production
 
-RUN apk add --no-cache cups-libs
+RUN apt-get update && apt-get install -y libcups2 && apt-get clean
 COPY --from=prebuild /root/.local /root/.local
 ```
 
