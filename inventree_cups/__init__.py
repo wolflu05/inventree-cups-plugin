@@ -1,3 +1,3 @@
 """This package provides a cups printer driver."""
 
-PLUGIN_VERSION = "1.4.0"
+PLUGIN_VERSION = "1.5.0"

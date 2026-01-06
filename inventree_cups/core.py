@@ -134,6 +134,8 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
                 cups.setPort(port)
                 cups.setUser(user)
                 cups.setPasswordCB(lambda: password)
+                # Disable encryption for non-SSL CUPS connections (required for custom ports/tunnels)
+                cups.setEncryption(cups.HTTP_ENCRYPT_NEVER)
                 
                 conn = cups.Connection()
                 logger.debug(f"CUPS: Successfully connected to {server}:{port}")
