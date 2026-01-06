@@ -73,10 +73,8 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
             },
             "PRINTER": {
                 "name": _("Printer"),
-                "description": _("Printer name from CUPS server (select from list or type manually if server is unreachable)"),
-                "choices": self.get_printer_choices,
+                "description": _("Printer name from CUPS server. Run 'lpstat -p' on the server to list available printers."),
                 "required": True,
-                "allow_custom": True,
             },
         }
 
