@@ -73,7 +73,7 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
             },
             "PRINTER": {
                 "name": _("Printer"),
-                "description": _("Printer name from CUPS server. Run 'lpstat -p' on the server to list available printers."),
+                "description": _("Printer name from CUPS server. Run 'lpstat -h <SERVER>:<PORT> -p' to list available printers (e.g., 'lpstat -h localhost:631 -p')."),
                 "required": True,
             },
         }
