@@ -73,9 +73,10 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
             },
             "PRINTER": {
                 "name": _("Printer"),
-                "description": _("Printer from cups server"),
+                "description": _("Printer name from CUPS server (select from list or type manually if server is unreachable)"),
                 "choices": self.get_printer_choices,
                 "required": True,
+                "allow_custom": True,
             },
         }
 
@@ -83,8 +84,29 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
 
     def init_machine(self, machine: BaseMachineType):
         """Machine initialize hook."""
-        if self.get_connection(machine) is None:
-            machine.handle_error(_("Cannot connect to cups server"))
+        conn = self.get_connection(machine)
+        if conn is None:
+            server = machine.get_setting("SERVER", "D")
+            port = machine.get_setting("PORT", "D")
+            machine.handle_error(
+                _("Cannot connect to CUPS server at %(server)s:%(port)s") % {
+                    'server': server,
+                    'port': port,
+                }
+            )
+            return
+        
+        # Validate printer exists on the server
+        printer_name = machine.get_setting("PRINTER", "D")
+        if printer_name:
+            available_printers = conn.getPrinters()
+            if printer_name not in available_printers:
+                machine.handle_error(
+                    _("Printer '%(printer)s' not found on CUPS server. Available: %(available)s") % {
+                        'printer': printer_name,
+                        'available': ', '.join(available_printers.keys()) if available_printers else _('none'),
+                    }
+                )
 
     def get_printer_choices(self, **kwargs):
         """Get printer choices from cups server."""
