@@ -1,6 +1,7 @@
 """This package provides a cups printer driver."""
 
 import cups
+import threading
 from tempfile import NamedTemporaryFile
 
 from django.db import models
@@ -14,6 +15,9 @@ from plugin.machine import BaseMachineType
 from plugin.machine.machine_types import LabelPrinterBaseDriver, LabelPrinterMachine
 
 from inventree_cups import PLUGIN_VERSION
+
+# Module-level lock for thread-safe CUPS connections
+_cups_lock = threading.Lock()
 
 
 class CupsLabelPlugin(InvenTreePlugin, MachineDriverMixin):
@@ -106,28 +110,18 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
                     }
                 )
 
-    def get_printer_choices(self, **kwargs):
-        """Get printer choices from cups server."""
-        conn = self.get_connection(kwargs["machine_config"].machine)
-
-        if conn:
-            return [
-                (dev_id, dev["printer-info"] or dev_id)
-                for dev_id, dev in conn.getPrinters().items()
-            ]
-        return [("", _("Error scanning for printers"))]
-
     def get_connection(self, machine: LabelPrinterMachine):
-        """Get connection to cups server."""
-        cups.setServer(machine.get_setting("SERVER", "D"))
-        cups.setPort(machine.get_setting("PORT", "D"))
-        cups.setUser(machine.get_setting("USER", "D"))
-        cups.setPasswordCB(lambda: machine.get_setting("PASSWORD", "D"))
+        """Get connection to cups server (thread-safe)."""
+        with _cups_lock:
+            cups.setServer(machine.get_setting("SERVER", "D"))
+            cups.setPort(machine.get_setting("PORT", "D"))
+            cups.setUser(machine.get_setting("USER", "D"))
+            cups.setPasswordCB(lambda: machine.get_setting("PASSWORD", "D"))
 
-        try:
-            return cups.Connection()
-        except Exception:
-            return None
+            try:
+                return cups.Connection()
+            except Exception:
+                return None
 
     def print_label(
         self,
