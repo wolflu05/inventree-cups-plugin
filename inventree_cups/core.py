@@ -112,15 +112,34 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
 
     def get_connection(self, machine: LabelPrinterMachine):
         """Get connection to cups server (thread-safe)."""
+        import logging
+        logger = logging.getLogger('inventree')
+        
+        server = machine.get_setting("SERVER", "D") or "localhost"
+        port = machine.get_setting("PORT", "D")
+        user = machine.get_setting("USER", "D") or ""
+        password = machine.get_setting("PASSWORD", "D") or ""
+        
+        # Ensure port is an integer
+        try:
+            port = int(port) if port else 631
+        except (ValueError, TypeError):
+            port = 631
+        
+        logger.debug(f"CUPS: Attempting connection to {server}:{port}")
+        
         with _cups_lock:
-            cups.setServer(machine.get_setting("SERVER", "D"))
-            cups.setPort(machine.get_setting("PORT", "D"))
-            cups.setUser(machine.get_setting("USER", "D"))
-            cups.setPasswordCB(lambda: machine.get_setting("PASSWORD", "D"))
-
             try:
-                return cups.Connection()
-            except Exception:
+                cups.setServer(server)
+                cups.setPort(port)
+                cups.setUser(user)
+                cups.setPasswordCB(lambda: password)
+                
+                conn = cups.Connection()
+                logger.debug(f"CUPS: Successfully connected to {server}:{port}")
+                return conn
+            except Exception as e:
+                logger.warning(f"CUPS: Failed to connect to {server}:{port} - {type(e).__name__}: {e}")
                 return None
 
     def print_label(
@@ -131,7 +150,13 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
         **kwargs,
     ) -> None:
         """Print label using cups server."""
-        machine.set_status(LabelPrinterMachine.MACHINE_STATUS.UNKNOWN)
+        import logging
+        logger = logging.getLogger('inventree')
+        
+        printer_name = machine.get_setting("PRINTER", "D")
+        logger.info(f"CUPS: Printing label '{label.name}' to printer '{printer_name}'")
+        
+        machine.set_status(LabelPrinterMachine.MACHINE_STATUS.PRINTING)
         conn = self.get_connection(machine)
 
         if conn is None:
@@ -146,15 +171,18 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
             f.flush()
 
             try:
-                for copy_idx in range(
-                    kwargs.get("printing_options", {}).get("copies", 1)
-                ):
-                    conn.printFile(
-                        machine.get_setting("PRINTER", "D"),
+                copies = kwargs.get("printing_options", {}).get("copies", 1)
+                for copy_idx in range(copies):
+                    job_id = conn.printFile(
+                        printer_name,
                         f.name,
                         f"{label.name}-{item.pk}-{copy_idx}.pdf",
                         {},
                     )
+                    logger.info(f"CUPS: Print job {job_id} submitted for '{printer_name}'")
+                machine.set_status(LabelPrinterMachine.MACHINE_STATUS.OPERATIONAL)
             except Exception as e:
+                logger.error(f"CUPS: Print failed - {type(e).__name__}: {e}")
                 machine.set_status(LabelPrinterMachine.MACHINE_STATUS.DISCONNECTED)
                 machine.handle_error(_("Error printing label") + f": {e}")
+
