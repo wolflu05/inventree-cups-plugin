@@ -130,14 +130,20 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
         
         with _cups_lock:
             try:
-                cups.setServer(server)
-                cups.setPort(port)
-                cups.setUser(user)
-                cups.setPasswordCB(lambda: password)
-                # Disable encryption for non-SSL CUPS connections (required for custom ports/tunnels)
-                cups.setEncryption(cups.HTTP_ENCRYPT_NEVER)
+                # Use constructor arguments instead of global setters for thread safety
+                conn = cups.Connection(
+                    host=server,
+                    port=port,
+                    encryption=cups.HTTP_ENCRYPT_NEVER
+                )
                 
-                conn = cups.Connection()
+                # Set user/password if provided (setUser is still global but passwordCB is per-request in some versions,
+                # so we keep them. Ideally we'd pass them to constructor if supported, but they aren't standard args)
+                if user:
+                    cups.setUser(user)
+                if password:
+                    cups.setPasswordCB(lambda: password)
+                
                 logger.debug(f"CUPS: Successfully connected to {server}:{port}")
                 return conn
             except Exception as e:
