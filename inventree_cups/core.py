@@ -75,6 +75,16 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
                 "default": "",
                 "protected": True,
             },
+            "ENCRYPTION": {
+                "name": _("Encryption"),
+                "description": _("Encryption mode for CUPS connection. 'Never' is required for SSH tunnels or local port forwarding."),
+                "choices": [
+                    ("always", _("Always")),
+                    ("never", _("Never")),
+                    ("if_requested", _("If Requested")),
+                ],
+                "default": "never",  # Default to never for tunnels/local which is common for this plugin usage
+            },
             "PRINTER": {
                 "name": _("Printer"),
                 "description": _("Printer name from CUPS server. Run 'lpstat -h <SERVER>:<PORT> -p' to list available printers (e.g., 'lpstat -h localhost:631 -p')."),
@@ -120,13 +130,26 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
         user = machine.get_setting("USER", "D") or ""
         password = machine.get_setting("PASSWORD", "D") or ""
         
+        # Get encryption setting
+        encryption_mode = machine.get_setting("ENCRYPTION", "D")
+        
+        # Map choice to pycups constants
+        encryption_map = {
+            "always": cups.HTTP_ENCRYPT_ALWAYS,
+            "never": cups.HTTP_ENCRYPT_NEVER,
+            "if_requested": cups.HTTP_ENCRYPT_IF_REQUESTED
+        }
+        
+        # Default to NEVER if not specified or invalid (common for tunnels)
+        cups_encryption = encryption_map.get(encryption_mode, cups.HTTP_ENCRYPT_NEVER)
+        
         # Ensure port is an integer
         try:
             port = int(port) if port else 631
         except (ValueError, TypeError):
             port = 631
         
-        logger.debug(f"CUPS: Attempting connection to {server}:{port}")
+        logger.debug(f"CUPS: Attempting connection to {server}:{port} (enc={encryption_mode})")
         
         with _cups_lock:
             try:
@@ -134,7 +157,7 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
                 conn = cups.Connection(
                     host=server,
                     port=port,
-                    encryption=cups.HTTP_ENCRYPT_NEVER
+                    encryption=cups_encryption
                 )
                 
                 # Set user/password if provided (setUser is still global but passwordCB is per-request in some versions,
