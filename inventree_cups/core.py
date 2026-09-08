@@ -211,7 +211,7 @@ class CupsLabelPrinterDriver(LabelPrinterBaseDriver):
                         {},
                     )
                     logger.info(f"CUPS: Print job {job_id} submitted for '{printer_name}'")
-                machine.set_status(LabelPrinterMachine.MACHINE_STATUS.OPERATIONAL)
+                machine.set_status(LabelPrinterMachine.MACHINE_STATUS.CONNECTED)
             except Exception as e:
                 logger.error(f"CUPS: Print failed - {type(e).__name__}: {e}")
                 machine.set_status(LabelPrinterMachine.MACHINE_STATUS.DISCONNECTED)
